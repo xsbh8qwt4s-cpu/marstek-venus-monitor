@@ -186,6 +186,12 @@
     <script src="js/log-manager.js"></script>
     <script src="js/response-handler.js"></script>
     <script src="js/ble-protocol.js"></script>
+    <!-- Marstek safety overlay (fork addition): risk gate + audit. Loaded after
+         ble-protocol.js so window.MarstekSafety exists before any command is sent. -->
+    <script src="js/safety/risk-classes.js"></script>
+    <script src="js/i18n/fr.js"></script>
+    <script src="js/safety/confirm.js"></script>
+    <script src="js/safety/audit-client.js"></script>
     <script src="js/ui-controller.js"></script>
     <script type="module">
         // Import the new payload system from compiled output

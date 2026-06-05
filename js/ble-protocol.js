@@ -913,6 +913,12 @@ async function sendCommandWithRetry(commandType, commandName, payload = null, op
     const timeoutMs = opts.timeoutMs ?? DEFAULT_CMD_TIMEOUT_MS;
     const verifier = opts.verifier;
 
+    // --- Marstek safety overlay gate (fork addition): confirm once before retries ---
+    if (window.MarstekSafety) {
+        const proceed = await window.MarstekSafety.beforeSend(commandType, commandName, payload, device?.name);
+        if (!proceed) throw new Error(`${commandName} annulé (garde-fou)`);
+    }
+
     let lastError;
     for (let attempt = 1; attempt <= retries; attempt++) {
         if (!(window.uiController?.isConnected?.())) {
@@ -939,7 +945,10 @@ async function sendCommandWithRetry(commandType, commandName, payload = null, op
             if (commandName !== 'Keepalive') resetKeepaliveTimer();
 
             const response = await responsePromise;
-            if (!verifier || verifier(response)) return response;
+            if (!verifier || verifier(response)) {
+                window.MarstekSafety?.afterSend(commandType, commandName, { ok: true }, device?.name);
+                return response;
+            }
             lastError = new Error(`Response verification failed for ${commandName}`);
         } catch (err) {
             lastError = err;
@@ -949,6 +958,7 @@ async function sendCommandWithRetry(commandType, commandName, payload = null, op
         }
     }
     log(`❌ ${commandName} failed after ${retries} attempts: ${lastError?.message}`);
+    window.MarstekSafety?.afterSend(commandType, commandName, { ok: false, error: String(lastError?.message) }, device?.name);
     throw lastError ?? new Error(`${commandName} failed`);
 }
 
@@ -968,6 +978,12 @@ async function sendCommand(commandType, commandName, payload = null, retryCount 
         return;
     }
     
+    // --- Marstek safety overlay gate (fork addition) ---
+    if (retryCount === 0 && window.MarstekSafety) {
+        const proceed = await window.MarstekSafety.beforeSend(commandType, commandName, payload, device?.name);
+        if (!proceed) { log(`🛑 ${commandName} annulé (garde-fou)`); return; }
+    }
+
     try {
         const command = createCommandMessage(commandType, payload);
         window.currentCommand = commandName;
@@ -1004,6 +1020,7 @@ async function sendCommand(commandType, commandName, payload = null, retryCount 
         if (commandName !== 'Keepalive') {
             resetKeepaliveTimer();
         }
+        window.MarstekSafety?.afterSend(commandType, commandName, { ok: true }, device?.name);
 
         // Set up timeout to clear command if no response
         setTimeout(() => {
@@ -1018,6 +1035,8 @@ async function sendCommand(commandType, commandName, payload = null, retryCount 
     } catch (error) {
         log(`❌ Failed to send ${commandName}: ${error.message}`);
         
+        window.MarstekSafety?.afterSend(commandType, commandName, { ok: false, error: error.message }, device?.name);
+
         // Retry on error
         if (retryCount < 2) {
             log(`🔄 Retrying ${commandName} due to error (attempt ${retryCount + 2}/3)...`);
@@ -1038,6 +1057,12 @@ async function sendCommand(commandType, commandName, payload = null, retryCount 
 async function sendMeterIPCommand(commandType, commandName, payload = null, retryCount = 0) {
     if (!(window.uiController ? window.uiController.isConnected() : false)) return;
     
+    // --- Marstek safety overlay gate (fork addition) ---
+    if (retryCount === 0 && window.MarstekSafety) {
+        const proceed = await window.MarstekSafety.beforeSend(commandType, commandName, payload, device?.name);
+        if (!proceed) { log(`🛑 ${commandName} annulé (garde-fou)`); return; }
+    }
+
     try {
         const command = createMeterIPMessage(commandType, payload);
         window.currentCommand = commandName;
