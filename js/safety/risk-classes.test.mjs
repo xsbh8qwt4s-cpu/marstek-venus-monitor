@@ -11,6 +11,7 @@ const { classify, TIER } = sandbox.window.MarstekRisk;
 assert.equal(classify(0x14).tier, TIER.READ, 'bms_data is READ');
 assert.equal(classify(0x14).name, 'bms_data');
 assert.equal(classify(0x28).tier, TIER.CONFIG, '0x28 enable Local API is CONFIG');
+assert.equal(classify(0x54).tier, TIER.CONFIG, '0x54 Set DoD is CONFIG');
 assert.equal(classify(0x05).tier, TIER.SENSITIVE, '0x05 URL broker is SENSITIVE');
 assert.equal(classify(0x06).tier, TIER.DANGEROUS, '0x06 factory reset is DANGEROUS');
 assert.equal(classify(0x1f).tier, TIER.DANGEROUS, '0x1F fw upgrade is DANGEROUS');

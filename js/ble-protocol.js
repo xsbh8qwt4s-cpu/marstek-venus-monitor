@@ -913,6 +913,13 @@ async function sendCommandWithRetry(commandType, commandName, payload = null, op
     const timeoutMs = opts.timeoutMs ?? DEFAULT_CMD_TIMEOUT_MS;
     const verifier = opts.verifier;
 
+    if (!(window.uiController?.isConnected?.())) {
+        throw new Error(`Cannot send ${commandName}: not connected`);
+    }
+    if (otaInProgress) {
+        throw new Error(`Cannot send ${commandName}: OTA in progress`);
+    }
+
     // --- Marstek safety overlay gate (fork addition): confirm once before retries ---
     if (window.MarstekSafety) {
         const proceed = await window.MarstekSafety.beforeSend(commandType, commandName, payload, device?.name);
@@ -1082,20 +1089,22 @@ async function sendMeterIPCommand(commandType, commandName, payload = null, retr
         
         const writeChar = writeChars[0];
         await writeChar.writeValueWithoutResponse(command);
-        
+        window.MarstekSafety?.afterSend(commandType, commandName, { ok: true }, device?.name);
+
         // Set up timeout to clear command if no response
         setTimeout(() => {
             // Clear command if still pending (no retry, just cleanup)
-            if (window.currentCommand === commandName && 
+            if (window.currentCommand === commandName &&
                 Date.now() - window.lastCommandTime > 2900) {
                 // Don't log timeout - responses are handled asynchronously
                 window.currentCommand = null;
             }
         }, 3000);
-        
+
     } catch (error) {
         log(`❌ Failed to send ${commandName}: ${error.message}`);
-        
+        window.MarstekSafety?.afterSend(commandType, commandName, { ok: false, error: error.message }, device?.name);
+
         // Retry on error
         if (retryCount < 2) {
             log(`🔄 Retrying ${commandName} due to error (attempt ${retryCount + 2}/3)...`);
@@ -2618,6 +2627,7 @@ async function sendConfigWriteCommand() {
         const writeChar = writeChars[0];
         logOutgoing(command, 'Config Write');
         await writeChar.writeValueWithoutResponse(command);
+        window.MarstekSafety?.afterSend(0x80, 'write_config', { ok: true }, device?.name);
         log('✅ Configuration write command sent successfully');
         
     } catch (error) {

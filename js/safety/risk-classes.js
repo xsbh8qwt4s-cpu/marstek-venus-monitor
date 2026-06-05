@@ -33,9 +33,11 @@
     0x23: { name: 'generator', tier: TIER.CONFIG },
     0x27: { name: 'power_array', tier: TIER.CONFIG },
     0x28: { name: 'local_api_config', tier: TIER.CONFIG },
+    0x54: { name: 'set_dod', tier: TIER.CONFIG },
     // --- SENSITIVE (redirect / lock) ---
     0x05: { name: 'url_broker_config', tier: TIER.SENSITIVE },
     0x53: { name: 'ble_lock', tier: TIER.SENSITIVE },
+    0x80: { name: 'write_config', tier: TIER.SENSITIVE },
     // --- DANGEROUS (reset / firmware) ---
     0x06: { name: 'factory_reset', tier: TIER.DANGEROUS },
     0x0c: { name: 'dev_mode_or_system_reset', tier: TIER.DANGEROUS },
